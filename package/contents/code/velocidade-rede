@@ -12,6 +12,11 @@
 set -u
 export LC_ALL=C
 
+# `iw` mora em /usr/sbin no Fedora, e o PATH de quem nos chama (plasmashell)
+# não é o do terminal. Resolver uma vez, com queda para o caminho conhecido.
+IW=$(command -v iw 2>/dev/null || true)
+[ -n "$IW" ] || IW=/usr/sbin/iw
+
 # A interface da rota padrão VENCEDORA: por onde o pacote realmente sai.
 # `ip route show default` já sai ordenado por métrica.
 _dev_padrao() {
@@ -53,7 +58,7 @@ case "${1:-}" in
 	ip=$(_ip4 "$dev")
 
 	if [ -d "/sys/class/net/$dev/wireless" ]; then
-		LINK=$(iw dev "$dev" link 2>/dev/null)
+		LINK=$("$IW" dev "$dev" link 2>/dev/null)
 		case "$LINK" in
 		*"Not connected"*|"") printf 'wifi|%s|||||%s|\n' "$dev" "$ip"; exit 0 ;;
 		esac

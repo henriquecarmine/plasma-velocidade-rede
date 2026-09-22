@@ -133,6 +133,10 @@ PlasmoidItem {
     }
 
     function aplicarEstado(saida) {
+        // Resposta VAZIA não é "sem rede": é o motor de execução engasgando
+        // (acontece no primeiro quadro). Fica o último estado conhecido; a
+        // ausência de rede de verdade chega explícita, como "none|…".
+        if (saida.indexOf("|") < 0) return;
         const c = saida.split("|");
         root.tipo    = c[0] || "none";
         root.dev     = c[1] || "";
@@ -146,6 +150,9 @@ PlasmoidItem {
     }
 
     function aplicarTaxa(saida) {
+        // Vazio aqui seria lido como contador 0 — e a leitura seguinte
+        // viraria um pico de centenas de MB/s. Ignora e espera a próxima.
+        if (saida.indexOf("|") < 0) return;
         const c = saida.split("|");
         const rx = parseFloat(c[0]) || 0, tx = parseFloat(c[1]) || 0;
         const t = Date.now() / 1000;
