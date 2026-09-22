@@ -12,8 +12,13 @@ chart in the **system accent colour**, with the network identity underneath.
   signal in dBm; on **cable** the link speed (`100` / `1000` / `10000 Mb/s`).
 - Follows the interface of the default route automatically (cable or Wi-Fi),
   and falls back to any port with a carrier.
-- Colours derive from the theme: download is the accent; upload is the accent
-  with its hue turned — it harmonises with whatever accent you pick.
+- Colours derive from the theme: download is the accent; upload is the same
+  hue, lighter and softer — one colour, two weights, so it harmonises with
+  whatever accent you pick.
+- **Period view** behind a small clock icon: the last 30 min to 24 h as 240
+  buckets (average, peak, bytes) kept in the widget's own configuration —
+  bounded by construction, never an ever-growing log. Shows the period average
+  and the total transferred.
 
 The Wi-Fi generation is read from the kernel (nl80211, via `iw`) — it is not
 exposed by NetworkManager.
