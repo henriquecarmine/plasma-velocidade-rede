@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Network Speed 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-21 22:46-0300\n"
+"POT-Creation-Date: 2026-09-21 22:56-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,39 +17,39 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: package/contents/ui/main.qml:81
+#: package/contents/ui/main.qml:92
 msgid "Wi-Fi 7"
 msgstr ""
 
-#: package/contents/ui/main.qml:82
+#: package/contents/ui/main.qml:93
 msgid "Wi-Fi 6E"
 msgstr ""
 
-#: package/contents/ui/main.qml:83
+#: package/contents/ui/main.qml:94
 msgid "Wi-Fi 6"
 msgstr ""
 
-#: package/contents/ui/main.qml:84
+#: package/contents/ui/main.qml:95
 msgid "Wi-Fi 5"
 msgstr ""
 
-#: package/contents/ui/main.qml:85
+#: package/contents/ui/main.qml:96
 msgid "Wi-Fi 4"
 msgstr ""
 
-#: package/contents/ui/main.qml:108
+#: package/contents/ui/main.qml:119
 msgid "Wi-Fi not connected"
 msgstr ""
 
-#: package/contents/ui/main.qml:113 package/contents/ui/main.qml:119
+#: package/contents/ui/main.qml:124 package/contents/ui/main.qml:130
 msgid "%1 Mb/s"
 msgstr ""
 
-#: package/contents/ui/main.qml:123
+#: package/contents/ui/main.qml:134
 msgid "No network"
 msgstr ""
 
-#: package/contents/ui/main.qml:350
+#: package/contents/ui/main.qml:370
 msgid "%1 dBm"
 msgstr ""
 

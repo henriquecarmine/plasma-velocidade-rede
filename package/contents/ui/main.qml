@@ -43,13 +43,24 @@ PlasmoidItem {
     readonly property bool mostrarIp: Plasmoid.configuration.mostrarIp
 
     // ---- tonalidade do sistema -------------------------------------------
-    readonly property color corBaixa: Kirigami.Theme.highlightColor
+    //
+    // Um item só para ter um escopo de tema PRÓPRIO. No desktop, applet sem
+    // fundo recebe o conjunto Complementary (texto claro sobre wallpaper) — e
+    // o FUNDO desse conjunto é escuro e translúcido, igual ao wallpaper: o
+    // cartão desaparecia e sobrava número solto sobre o papel de parede.
+    // Lendo do conjunto Window, o cartão é o cartão do esquema de cores.
+    Item {
+        id: tema
+        Kirigami.Theme.inherit: false
+        Kirigami.Theme.colorSet: Kirigami.Theme.Window
+    }
+    readonly property color corBaixa: tema.Kirigami.Theme.highlightColor
     readonly property color corSobe: Qt.hsla(
-        (Kirigami.Theme.highlightColor.hslHue + 0.42) % 1.0,
-        Math.min(1.0, Kirigami.Theme.highlightColor.hslSaturation * 0.9),
-        Math.min(0.72, Kirigami.Theme.highlightColor.hslLightness + 0.10), 1.0)
-    readonly property color corTexto: Kirigami.Theme.textColor
-    readonly property color corFundo: Kirigami.Theme.backgroundColor
+        (tema.Kirigami.Theme.highlightColor.hslHue + 0.42) % 1.0,
+        Math.min(1.0, tema.Kirigami.Theme.highlightColor.hslSaturation * 0.9),
+        Math.min(0.72, tema.Kirigami.Theme.highlightColor.hslLightness + 0.10), 1.0)
+    readonly property color corTexto: tema.Kirigami.Theme.textColor
+    readonly property color corFundo: tema.Kirigami.Theme.backgroundColor
 
     function rgba(c, a) {
         return "rgba(" + Math.round(c.r * 255) + "," + Math.round(c.g * 255)
@@ -127,7 +138,11 @@ PlasmoidItem {
     // piso, uma rede parada vira ruído amplificado até o teto; sem a escala,
     // 100 MB/s de download achatariam 1 MB/s de upload a uma linha reta.
     function maxDe(h) {
-        let m = 50e3;
+        // Piso de 10 KB/s: a conversa de fundo de uma rede "parada" (1–3
+        // KB/s) ainda desenha textura no terço de baixo — o gráfico é a
+        // identidade deste widget, e um traço reto no chão o descaracteriza.
+        // Com tráfego de verdade a escala cresce e o chão achata, como deve.
+        let m = 10e3;
         for (let i = 0; i < h.length; i++) if (h[i] > m) m = h[i];
         return m * 1.08;
     }
@@ -245,12 +260,17 @@ PlasmoidItem {
         Layout.preferredHeight: Kirigami.Units.gridUnit * 13
 
         Kirigami.ShadowedRectangle {
+            // O mesmo conjunto Window para TUDO que está dentro: os rótulos
+            // sem cor explícita herdam daqui, e ficam legíveis sobre o cartão
+            // em esquema claro ou escuro.
+            Kirigami.Theme.inherit: false
+            Kirigami.Theme.colorSet: Kirigami.Theme.Window
             anchors.fill: parent
             anchors.margins: Kirigami.Units.smallSpacing
             radius: Kirigami.Units.cornerRadius * 2
-            color: Qt.alpha(root.corFundo, 0.90)
+            color: Qt.alpha(root.corFundo, 0.92)
             border.width: 1
-            border.color: Qt.alpha(root.corTexto, 0.10)
+            border.color: Qt.alpha(root.corTexto, 0.14)
             shadow.size: Kirigami.Units.largeSpacing * 2
             shadow.color: Qt.rgba(0, 0, 0, 0.35)
             clip: true
