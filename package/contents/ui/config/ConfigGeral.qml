@@ -3,6 +3,7 @@
  * e se o IP aparece. As propriedades `cfg_*` são o contrato com o main.xml.
  */
 import QtQuick
+import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 import org.kde.kcmutils as KCM
