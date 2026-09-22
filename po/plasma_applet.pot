@@ -1,0 +1,78 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the Network Speed package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Network Speed 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-21 21:47-0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: package/contents/ui/main.qml:81
+msgid "Wi-Fi 7"
+msgstr ""
+
+#: package/contents/ui/main.qml:82
+msgid "Wi-Fi 6E"
+msgstr ""
+
+#: package/contents/ui/main.qml:83
+msgid "Wi-Fi 6"
+msgstr ""
+
+#: package/contents/ui/main.qml:84
+msgid "Wi-Fi 5"
+msgstr ""
+
+#: package/contents/ui/main.qml:85
+msgid "Wi-Fi 4"
+msgstr ""
+
+#: package/contents/ui/main.qml:108
+msgid "Wi-Fi not connected"
+msgstr ""
+
+#: package/contents/ui/main.qml:113 package/contents/ui/main.qml:119
+msgid "%1 Mb/s"
+msgstr ""
+
+#: package/contents/ui/main.qml:123
+msgid "No network"
+msgstr ""
+
+#: package/contents/ui/main.qml:343
+msgid "%1 dBm"
+msgstr ""
+
+#: package/contents/ui/config/ConfigGeral.qml:22
+msgid "Unit:"
+msgstr ""
+
+#: package/contents/ui/config/ConfigGeral.qml:23
+msgid "MB/s — megabytes per second"
+msgstr ""
+
+#: package/contents/ui/config/ConfigGeral.qml:29
+msgid "Mb/s — megabits per second"
+msgstr ""
+
+#: package/contents/ui/config/ConfigGeral.qml:37
+msgid "Details:"
+msgstr ""
+
+#: package/contents/ui/config/ConfigGeral.qml:38
+msgid "Show the IP address"
+msgstr ""
+
+#: package/contents/config/config.qml:6
+msgid "General"
+msgstr ""

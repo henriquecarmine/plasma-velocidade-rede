@@ -1,0 +1,18 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Henrique Carmine"
+            }
+        ],
+        "Category": "System Information",
+        "Description": "Live download and upload speed for the desktop, drawn as a running chart in the system accent colour. Shows the network name; on Wi-Fi the generation (4/5/6/6E/7), negotiated speed and signal; on cable the link speed (100/1000/10000).",
+        "Icon": "network-wireless",
+        "Id": "com.henrique.velocidaderede",
+        "License": "MIT",
+        "Name": "Network Speed",
+        "Version": "0.1.0"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

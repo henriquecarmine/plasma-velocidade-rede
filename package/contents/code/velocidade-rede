@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# Velocidade da Rede — o ajudante do widget.
+#
+# Emite TOKENS estáveis, nunca prosa: as palavras vivem no QML, onde o catálogo
+# de tradução as alcança. O campo de texto livre (SSID) vai SEMPRE por último —
+# um "|" no nome da rede não desloca campo nenhum.
+#
+# Duas perguntas só:
+#   --estado        "tipo|dev|gen|nominal|dbm|link|ip|ssid"
+#   --taxa <dev>    "rx_bytes|tx_bytes"   (contadores crus; a taxa é a
+#                    diferença entre duas leituras, e quem tem relógio é o QML)
+set -u
+export LC_ALL=C
+
+# A interface da rota padrão VENCEDORA: por onde o pacote realmente sai.
+# `ip route show default` já sai ordenado por métrica.
+_dev_padrao() {
+	/usr/sbin/ip -4 route show default 2>/dev/null \
+	| awk '{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1); exit}}'
+}
+
+# Sem rota padrão, a primeira interface FÍSICA com portadora: uma LAN sem
+# gateway ainda tem tráfego para mostrar. O teste de `device` barra docker0,
+# veth, br- e afins.
+_dev_portadora() {
+	for c in /sys/class/net/*; do
+		d=$(basename "$c")
+		[ "$d" = "lo" ] && continue
+		[ -e "$c/device" ] || continue
+		[ "$(cat "$c/carrier" 2>/dev/null || echo 0)" = "1" ] && { echo "$d"; return 0; }
+	done
+	return 0
+}
+
+_ip4() { /usr/sbin/ip -4 addr show "$1" 2>/dev/null | awk '/inet /{print $2; exit}'; }
+
+case "${1:-}" in
+--taxa)
+	d="${2:-}"
+	rx=0; tx=0
+	if [ -n "$d" ] && [ -r "/sys/class/net/$d/statistics/rx_bytes" ]; then
+		read -r rx < "/sys/class/net/$d/statistics/rx_bytes"
+		read -r tx < "/sys/class/net/$d/statistics/tx_bytes"
+	fi
+	printf '%s|%s\n' "${rx:-0}" "${tx:-0}"
+	exit 0
+	;;
+
+--estado)
+	dev=$(_dev_padrao)
+	[ -n "$dev" ] || dev=$(_dev_portadora)
+	[ -n "$dev" ] || { echo "none|||||||"; exit 0; }
+	ip=$(_ip4 "$dev")
+
+	if [ -d "/sys/class/net/$dev/wireless" ]; then
+		LINK=$(iw dev "$dev" link 2>/dev/null)
+		case "$LINK" in
+		*"Not connected"*|"") printf 'wifi|%s|||||%s|\n' "$dev" "$ip"; exit 0 ;;
+		esac
+		ssid=$(printf '%s\n' "$LINK" | sed -n 's/^[[:space:]]*SSID: //p' | head -n1)
+		rx=$(printf '%s\n' "$LINK" | awk '/rx bitrate:/{print; exit}')
+		tx=$(printf '%s\n' "$LINK" | awk '/tx bitrate:/{print; exit}')
+		sig=$(printf '%s\n' "$LINK" | awk '/signal:/{print $2; exit}')
+		frq=$(printf '%s\n' "$LINK" | awk '/freq:/{print $2; exit}')
+
+		# A geração sai do esquema de modulação negociado (nl80211, via iw):
+		#   EHT = Wi-Fi 7 · HE = Wi-Fi 6/6E · VHT = Wi-Fi 5 · HT (MCS) = Wi-Fi 4.
+		# Sem MCS nenhum é 802.11 a/b/g — a Wi-Fi Alliance só numerou a partir
+		# do 4, então não há número honesto para inventar.
+		gen="abg"
+		case "$rx$tx" in
+			*EHT-MCS*) gen="7" ;;
+			*HE-MCS*)  gen="6" ;;
+			*VHT-MCS*) gen="5" ;;
+			*MCS*)     gen="4" ;;
+		esac
+		# 6 GHz é o que separa o Wi-Fi 6 do 6E. A banda começa em 5925 MHz.
+		if [ -n "${frq:-}" ]; then
+			case "$frq" in *.*) f=${frq%%.*} ;; *) f=$frq ;; esac
+			if [ "$gen" = "6" ] && [ "${f:-0}" -ge 5925 ] 2>/dev/null; then gen="6E"; fi
+		fi
+		vrx=$(printf '%s\n' "$rx" | awk '{for(i=1;i<=NF;i++) if($i=="bitrate:"){printf "%d", $(i+1); exit}}')
+		vtx=$(printf '%s\n' "$tx" | awk '{for(i=1;i<=NF;i++) if($i=="bitrate:"){printf "%d", $(i+1); exit}}')
+		printf 'wifi|%s|%s|%s/%s|%s||%s|%s\n' \
+			"$dev" "$gen" "${vrx:-0}" "${vtx:-0}" "${sig:-}" "$ip" "$ssid"
+	else
+		# Velocidade negociada do meio, lida do kernel: 100, 1000, 2500, 10000…
+		vel=$(cat "/sys/class/net/$dev/speed" 2>/dev/null)
+		[ "${vel:-0}" -gt 0 ] 2>/dev/null || vel=""
+		printf 'cabo|%s||||%s|%s|\n' "$dev" "$vel" "$ip"
+	fi
+	exit 0
+	;;
+
+*)
+	echo "uso: $0 --estado | --taxa <interface>" >&2
+	exit 2
+	;;
+esac

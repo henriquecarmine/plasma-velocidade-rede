@@ -1,0 +1,56 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Network Speed\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: fr\n"
+"PO-Revision-Date: 2026-09-21 00:00+0000\n"
+"Last-Translator: Henrique Carmine\n"
+"Language-Team: none\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "Wi-Fi 7"
+msgstr "Wi-Fi 7"
+
+msgid "Wi-Fi 6E"
+msgstr "Wi-Fi 6E"
+
+msgid "Wi-Fi 6"
+msgstr "Wi-Fi 6"
+
+msgid "Wi-Fi 5"
+msgstr "Wi-Fi 5"
+
+msgid "Wi-Fi 4"
+msgstr "Wi-Fi 4"
+
+msgid "Wi-Fi not connected"
+msgstr "Wi-Fi non connecté"
+
+msgid "%1 Mb/s"
+msgstr "%1 Mb/s"
+
+msgid "No network"
+msgstr "Pas de réseau"
+
+msgid "%1 dBm"
+msgstr "%1 dBm"
+
+msgid "General"
+msgstr "Général"
+
+msgid "Unit:"
+msgstr "Unité :"
+
+msgid "MB/s — megabytes per second"
+msgstr "Mo/s — mégaoctets par seconde"
+
+msgid "Mb/s — megabits per second"
+msgstr "Mb/s — mégabits par seconde"
+
+msgid "Details:"
+msgstr "Détails :"
+
+msgid "Show the IP address"
+msgstr "Afficher l'adresse IP"
