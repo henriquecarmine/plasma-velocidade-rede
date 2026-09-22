@@ -39,8 +39,10 @@ PlasmoidItem {
     preferredRepresentation: fullRepresentation
 
     // ---- configuração ----------------------------------------------------
-    readonly property bool emBits:    Plasmoid.configuration.unidadeBits
-    readonly property bool mostrarIp: Plasmoid.configuration.mostrarIp
+    readonly property bool emBits:      Plasmoid.configuration.unidadeBits
+    readonly property bool mostrarIp:   Plasmoid.configuration.mostrarIp
+    readonly property int  periodoMin:  Plasmoid.configuration.periodoMin   // 30…1440
+    readonly property bool modoPeriodo: Plasmoid.configuration.modoPeriodo  // o ícone-relógio
 
     // ---- tonalidade do sistema -------------------------------------------
     //
@@ -110,7 +112,9 @@ PlasmoidItem {
     function num(b) {
         const loc = Qt.locale();
         const v = root.emBits ? b * 8 : b;
-        if (v >= 1e6) return Number(v / 1e6).toLocaleString(loc, 'f', v >= 10e6 ? 0 : 1);
+        // Inteiro exato sai sem decimal (5 MB/s, não 5,0) — a grade agradece.
+        if (v >= 1e6) return Number(v / 1e6).toLocaleString(loc, 'f',
+            (v >= 10e6 || Math.abs(v / 1e6 - Math.round(v / 1e6)) < 1e-9) ? 0 : 1);
         if (v >= 1e3) return Number(v / 1e3).toLocaleString(loc, 'f', 0);
         return Number(v).toLocaleString(loc, 'f', 0);
     }
@@ -140,6 +144,99 @@ PlasmoidItem {
         return i18nd(root.dom, "No network");
     }
 
+    function taxa(b) { return root.num(b) + " " + root.unid(b); }
+    function bytesTexto(b) {
+        const loc = Qt.locale();
+        if (b >= 1e9) return Number(b / 1e9).toLocaleString(loc, 'f', 1) + " GB";
+        if (b >= 1e6) return Number(b / 1e6).toLocaleString(loc, 'f', 0) + " MB";
+        if (b >= 1e3) return Number(b / 1e3).toLocaleString(loc, 'f', 0) + " KB";
+        return Number(b).toLocaleString(loc, 'f', 0) + " B";
+    }
+    function periodoTexto() {
+        const m = root.periodoMin;
+        return m < 60 ? i18nd(root.dom, "%1 min", m) : i18nd(root.dom, "%1 h", m / 60);
+    }
+
+    // ---- período: o anel de baldes -----------------------------------------
+    //
+    // O gráfico de 60 s responde "e agora?"; o período responde "e na última
+    // hora / no último dia?". Sem log eterno: são SEMPRE ~240 baldes, seja o
+    // período 30 min (um balde a cada 7,5 s) ou 24 h (um a cada 6 min). Cada
+    // balde guarda média, pico e bytes de download e upload. O anel vive na
+    // configuração do widget (limitado), para um reinício do Plasma não
+    // apagar as últimas horas. Trocar o período zera o anel: baldes de
+    // tamanhos diferentes não se misturam.
+    readonly property int  nBaldes:  240
+    readonly property real baldeSeg: root.periodoMin * 60 / root.nBaldes
+    property var  anel: []      // [{ad, md, au, mu, bd, bu}] média/pico/bytes
+    property real bIni: 0       // início do balde corrente (época, s)
+    property real bSd: 0
+    property real bSu: 0
+    property real bMd: 0
+    property real bMu: 0
+    property real bSeg: 0
+    property bool anelSujo: false
+
+    function fecharBalde(t) {
+        const seg = root.bSeg > 0 ? root.bSeg : 1;
+        let a = root.anel.slice();
+        a.push({ ad: root.bSd / seg, md: root.bMd, au: root.bSu / seg, mu: root.bMu,
+                 bd: root.bSd, bu: root.bSu });
+        // Baldes perdidos (máquina dormiu, rede sumiu): zeros, para o eixo
+        // do tempo continuar honesto.
+        const prox = root.bIni + root.baldeSeg;
+        let k = Math.floor((t - prox) / root.baldeSeg);
+        if (k < 0) k = 0;
+        for (let i = 0; i < k && i < root.nBaldes; i++)
+            a.push({ ad: 0, md: 0, au: 0, mu: 0, bd: 0, bu: 0 });
+        while (a.length > root.nBaldes) a.shift();
+        root.anel = a; root.anelSujo = true;
+        root.bIni = prox + k * root.baldeSeg;
+        root.bSd = 0; root.bSu = 0; root.bMd = 0; root.bMu = 0; root.bSeg = 0;
+    }
+    function acumular(d, u, dt, t) {
+        if (root.bIni === 0) root.bIni = t - (t % root.baldeSeg);
+        if (t >= root.bIni + root.baldeSeg) root.fecharBalde(t);
+        root.bSd += d * dt; root.bSu += u * dt; root.bSeg += dt;
+        if (d > root.bMd) root.bMd = d;
+        if (u > root.bMu) root.bMu = u;
+    }
+    function salvarAnel() {
+        if (!root.anelSujo) return;
+        Plasmoid.configuration.historico = JSON.stringify({ p: root.periodoMin, ini: root.bIni, a: root.anel });
+        root.anelSujo = false;
+    }
+    function carregarAnel() {
+        try {
+            const o = JSON.parse(Plasmoid.configuration.historico || "{}");
+            if (o && o.p === root.periodoMin && Array.isArray(o.a)) {
+                root.anel = o.a.slice(-root.nBaldes);
+                root.bIni = o.ini || 0;
+            }
+        } catch (e) { }
+    }
+    function zerarAnel() {
+        root.anel = []; root.bIni = 0;
+        root.bSd = 0; root.bSu = 0; root.bMd = 0; root.bMu = 0; root.bSeg = 0;
+        root.anelSujo = true; root.salvarAnel();
+    }
+    Component.onCompleted: root.carregarAnel()
+    onPeriodoMinChanged: if (root.anel.length > 0 || root.bIni > 0) root.zerarAnel()
+    Timer { interval: 60000; running: true; repeat: true; onTriggered: root.salvarAnel() }
+
+    // Estatísticas do período, recalculadas quando o anel muda.
+    readonly property var estat: {
+        let sd = 0, su = 0, bd = 0, bu = 0, pico = 0;
+        const n = root.anel.length;
+        for (let i = 0; i < n; i++) {
+            const b = root.anel[i];
+            sd += b.ad; su += b.au; bd += b.bd; bu += b.bu;
+            if (b.md > pico) pico = b.md;
+            if (b.mu > pico) pico = b.mu;
+        }
+        return { medD: n ? sd / n : 0, medU: n ? su / n : 0, totD: bd, totU: bu, pico: pico };
+    }
+
     // ---- escala do gráfico ------------------------------------------------
     //
     // UMA escala para as duas séries, senão o gráfico não é quantitativo: o
@@ -158,8 +255,12 @@ PlasmoidItem {
     }
     readonly property real topo: {
         let m = 10e3;
-        for (let i = 0; i < histDown.length; i++) if (histDown[i] > m) m = histDown[i];
-        for (let i = 0; i < histUp.length;   i++) if (histUp[i]   > m) m = histUp[i];
+        if (root.modoPeriodo) {
+            if (root.estat.pico > m) m = root.estat.pico;
+        } else {
+            for (let i = 0; i < histDown.length; i++) if (histDown[i] > m) m = histDown[i];
+            for (let i = 0; i < histUp.length;   i++) if (histUp[i]   > m) m = histUp[i];
+        }
         const b = root.emBits ? 8 : 1;
         return root.bonito(m * b * 1.05) / b;   // bonito na unidade exibida, guardado em bytes
     }
@@ -192,6 +293,7 @@ PlasmoidItem {
             const d = Math.max(0, (rx - root.ultRx) / dt);
             const u = Math.max(0, (tx - root.ultTx) / dt);
             root.down = d; root.up = u;
+            root.acumular(d, u, dt, t);
             let hd = root.histDown.slice(); hd.push(d);
             if (hd.length > root.nHist) hd.shift(); root.histDown = hd;
             let hu = root.histUp.slice(); hu.push(u);
@@ -241,24 +343,26 @@ PlasmoidItem {
 
     // A série: área com degradê e a linha por cima. Ancorada à DIREITA: o
     // agora fica na borda e o passado entra rolando, como num monitor.
-    function serie(ctx, w, h, dados, maxV, cor, esp, alfaArea) {
+    function serie(ctx, w, h, dados, maxV, cor, esp, alfaArea, n) {
         if (dados.length < 2) return;
-        const desloc = root.nHist - dados.length;
+        const desloc = n - dados.length;
         const p = [];
         for (let i = 0; i < dados.length; i++)
-            p.push([(i + desloc) / (root.nHist - 1) * w, root.yDe(dados[i], h, maxV)]);
+            p.push([(i + desloc) / (n - 1) * w, root.yDe(dados[i], h, maxV)]);
+        if (alfaArea > 0) {
+            ctx.beginPath();
+            ctx.moveTo(p[0][0], p[0][1]);
+            for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]);
+            ctx.lineTo(p[p.length - 1][0], h); ctx.lineTo(p[0][0], h); ctx.closePath();
+            const g = ctx.createLinearGradient(0, 0, 0, h);
+            g.addColorStop(0, root.rgba(cor, alfaArea));
+            g.addColorStop(1, root.rgba(cor, 0.01));
+            ctx.fillStyle = g; ctx.fill();
+        }
         ctx.beginPath();
         ctx.moveTo(p[0][0], p[0][1]);
         for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]);
-        ctx.lineTo(p[p.length - 1][0], h); ctx.lineTo(p[0][0], h); ctx.closePath();
-        const g = ctx.createLinearGradient(0, 0, 0, h);
-        g.addColorStop(0, root.rgba(cor, alfaArea));
-        g.addColorStop(1, root.rgba(cor, 0.01));
-        ctx.fillStyle = g; ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(p[0][0], p[0][1]);
-        for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]);
-        ctx.strokeStyle = root.rgba(cor, 1); ctx.lineWidth = esp;
+        ctx.strokeStyle = root.rgba(cor, alfaArea > 0 ? 1 : 0.45); ctx.lineWidth = esp;
         ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
     }
 
@@ -343,6 +447,25 @@ PlasmoidItem {
                         }
                     }
                     Item { Layout.fillWidth: true }
+
+                    // O ícone pequenino: liga/desliga a vista do período.
+                    PlasmaComponents.ToolButton {
+                        id: btnPeriodo
+                        icon.name: "view-history"
+                        checkable: true
+                        flat: true
+                        implicitWidth:  Kirigami.Units.iconSizes.small * 1.7 * janela.escala
+                        implicitHeight: implicitWidth
+                        opacity: checked ? 1 : 0.55
+                        onToggled: Plasmoid.configuration.modoPeriodo = checked
+                        PlasmaComponents.ToolTip.visible: hovered
+                        PlasmaComponents.ToolTip.text: checked
+                            ? i18nd(root.dom, "Last %1 — click for live", root.periodoTexto())
+                            : i18nd(root.dom, "Live (60 s) — click for the last %1", root.periodoTexto())
+                    }
+                    // Mantém o botão sincronizado com a configuração mesmo depois
+                    // de um clique (o clique quebraria um binding simples).
+                    Binding { btnPeriodo.checked: root.modoPeriodo }
                 }
 
                 // ---- faixa 2: o gráfico, com grade rotulada e marcadores --
@@ -365,14 +488,34 @@ PlasmoidItem {
                                 const y = Math.round(root.yDe(topo * i / 4, h, topo)) + 0.5;
                                 ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
                             }
-                            root.serie(ctx, w, h, root.histDown, topo, root.corBaixa, Math.max(1.2, 2 * janela.escala), 0.30);
-                            root.serie(ctx, w, h, root.histUp,   topo, root.corSobe,  Math.max(1.2, 2 * janela.escala), 0.16);
-                            if (root.histDown.length > 1) root.marcador(ctx, w, h, root.down, topo, root.corBaixa);
-                            if (root.histUp.length   > 1) root.marcador(ctx, w, h, root.up,   topo, root.corSobe);
+                            const esp = Math.max(1.2, 2 * janela.escala);
+                            if (root.modoPeriodo) {
+                                // O período: média por balde com área, pico como
+                                // contorno fino por cima, e a tracejada na MÉDIA
+                                // do período inteiro.
+                                const a = root.anel, n = root.nBaldes;
+                                const ad = a.map(function (b) { return b.ad; }), md = a.map(function (b) { return b.md; });
+                                const au = a.map(function (b) { return b.au; }), mu = a.map(function (b) { return b.mu; });
+                                root.serie(ctx, w, h, md, topo, root.corBaixa, 1, 0, n);
+                                root.serie(ctx, w, h, mu, topo, root.corSobe,  1, 0, n);
+                                root.serie(ctx, w, h, ad, topo, root.corBaixa, esp, 0.30, n);
+                                root.serie(ctx, w, h, au, topo, root.corSobe,  esp, 0.16, n);
+                                if (a.length > 1) {
+                                    root.marcador(ctx, w, h, root.estat.medD, topo, root.corBaixa);
+                                    root.marcador(ctx, w, h, root.estat.medU, topo, root.corSobe);
+                                }
+                            } else {
+                                root.serie(ctx, w, h, root.histDown, topo, root.corBaixa, esp, 0.30, root.nHist);
+                                root.serie(ctx, w, h, root.histUp,   topo, root.corSobe,  esp, 0.16, root.nHist);
+                                if (root.histDown.length > 1) root.marcador(ctx, w, h, root.down, topo, root.corBaixa);
+                                if (root.histUp.length   > 1) root.marcador(ctx, w, h, root.up,   topo, root.corSobe);
+                            }
                         }
                         Connections {
                             target: root
                             function onHistUpChanged() { grafico.requestPaint(); }
+                            function onAnelChanged() { grafico.requestPaint(); }
+                            function onModoPeriodoChanged() { grafico.requestPaint(); }
                             function onEmBitsChanged() { grafico.requestPaint(); }
                         }
                         onWidthChanged: requestPaint()
@@ -383,16 +526,56 @@ PlasmoidItem {
                     // Somem quando o widget é pequeno demais para lê-los.
                     Repeater {
                         model: 3
-                        delegate: PlasmaComponents.Label {
+                        delegate: Rectangle {
                             required property int index
                             readonly property real fracao: (index + 1) / 4
-                            visible: janela.escala >= 0.6 && root.histDown.length > 1
-                            text: root.num(root.topo * fracao) + " " + root.unid(root.topo * fracao)
-                            font.pointSize: Math.max(6, janela.ptPeq * 0.9)
-                            opacity: 0.45
+                            visible: janela.escala >= 0.6
+                                     && (root.modoPeriodo ? root.anel.length > 1 : root.histDown.length > 1)
+                            // Fundo da cor do cartão: a tracejada e as séries não
+                            // atravessam o texto.
+                            color: Qt.alpha(root.corFundo, 0.8)
+                            radius: 3
+                            width: rotGrade.implicitWidth + 6
+                            height: rotGrade.implicitHeight + 2
                             anchors.right: parent.right
                             anchors.rightMargin: Kirigami.Units.smallSpacing
                             y: Math.round(root.yDe(root.topo * fracao, area.height, root.topo)) - height - 1
+                            PlasmaComponents.Label {
+                                id: rotGrade
+                                anchors.centerIn: parent
+                                text: root.num(root.topo * fracao) + " " + root.unid(root.topo * fracao)
+                                font.pointSize: Math.max(6, janela.ptPeq * 0.9)
+                                opacity: 0.55
+                            }
+                        }
+                    }
+
+                    // A etiqueta do período: média e total, no canto do gráfico.
+                    Rectangle {
+                        visible: root.modoPeriodo && janela.escala >= 0.6
+                        color: Qt.alpha(root.corFundo, 0.8)
+                        radius: 3
+                        width: colEtiq.implicitWidth + 8
+                        height: colEtiq.implicitHeight + 4
+                        anchors.left: parent.left
+                        anchors.top: parent.top
+                        anchors.margins: Kirigami.Units.smallSpacing
+                        ColumnLayout {
+                            id: colEtiq
+                            anchors.centerIn: parent
+                            spacing: 0
+                            PlasmaComponents.Label {
+                                text: i18nd(root.dom, "%1 · avg ↓ %2  ↑ %3", root.periodoTexto(),
+                                            root.taxa(root.estat.medD), root.taxa(root.estat.medU))
+                                font.pointSize: Math.max(6, janela.ptPeq * 0.9)
+                                opacity: 0.75
+                            }
+                            PlasmaComponents.Label {
+                                text: i18nd(root.dom, "total ↓ %1  ↑ %2",
+                                            root.bytesTexto(root.estat.totD), root.bytesTexto(root.estat.totU))
+                                font.pointSize: Math.max(6, janela.ptPeq * 0.9)
+                                opacity: 0.55
+                            }
                         }
                     }
                 }

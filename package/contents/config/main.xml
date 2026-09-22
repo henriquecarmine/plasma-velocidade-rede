@@ -12,5 +12,18 @@
     <entry name="mostrarIp" type="Bool">
       <default>true</default>
     </entry>
+    <!-- Período do histórico, em minutos: 30, 60, 120, 240, 360, 720, 1440. -->
+    <entry name="periodoMin" type="Int">
+      <default>60</default>
+    </entry>
+    <!-- O ícone-relógio: false = 60 s ao vivo; true = o período. -->
+    <entry name="modoPeriodo" type="Bool">
+      <default>false</default>
+    </entry>
+    <!-- O anel de baldes do período (JSON, ~240 entradas). Limitado por
+         construção: não é log, é a última janela. -->
+    <entry name="historico" type="String">
+      <default></default>
+    </entry>
   </group>
 </kcfg>

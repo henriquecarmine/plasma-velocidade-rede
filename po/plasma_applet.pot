@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Network Speed 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-22 05:04-0300\n"
+"POT-Creation-Date: 2026-09-22 05:16-0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,59 +17,100 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: package/contents/ui/main.qml:98
+#: package/contents/ui/main.qml:100
 msgid "Wi-Fi 7"
 msgstr ""
 
-#: package/contents/ui/main.qml:99
+#: package/contents/ui/main.qml:101
 msgid "Wi-Fi 6E"
 msgstr ""
 
-#: package/contents/ui/main.qml:100
+#: package/contents/ui/main.qml:102
 msgid "Wi-Fi 6"
 msgstr ""
 
-#: package/contents/ui/main.qml:101
+#: package/contents/ui/main.qml:103
 msgid "Wi-Fi 5"
 msgstr ""
 
-#: package/contents/ui/main.qml:102
+#: package/contents/ui/main.qml:104
 msgid "Wi-Fi 4"
 msgstr ""
 
-#: package/contents/ui/main.qml:125
+#: package/contents/ui/main.qml:129
 msgid "Wi-Fi not connected"
 msgstr ""
 
-#: package/contents/ui/main.qml:130 package/contents/ui/main.qml:136
+#: package/contents/ui/main.qml:134 package/contents/ui/main.qml:140
 msgid "%1 Mb/s"
 msgstr ""
 
-#: package/contents/ui/main.qml:140
+#: package/contents/ui/main.qml:144
 msgid "No network"
 msgstr ""
 
-#: package/contents/ui/main.qml:425
+#: package/contents/ui/main.qml:157
+#: package/contents/ui/config/ConfigGeral.qml:19
+msgid "%1 min"
+msgstr ""
+
+#: package/contents/ui/main.qml:157
+#: package/contents/ui/config/ConfigGeral.qml:20
+#: package/contents/ui/config/ConfigGeral.qml:21
+#: package/contents/ui/config/ConfigGeral.qml:22
+#: package/contents/ui/config/ConfigGeral.qml:23
+#: package/contents/ui/config/ConfigGeral.qml:24
+#: package/contents/ui/config/ConfigGeral.qml:25
+msgid "%1 h"
+msgstr ""
+
+#: package/contents/ui/main.qml:463
+msgid "Last %1 — click for live"
+msgstr ""
+
+#: package/contents/ui/main.qml:464
+msgid "Live (60 s) — click for the last %1"
+msgstr ""
+
+#: package/contents/ui/main.qml:568
+msgid "%1 · avg ↓ %2  ↑ %3"
+msgstr ""
+
+#: package/contents/ui/main.qml:574
+msgid "total ↓ %1  ↑ %2"
+msgstr ""
+
+#: package/contents/ui/main.qml:608
 msgid "%1 dBm"
 msgstr ""
 
-#: package/contents/ui/config/ConfigGeral.qml:22
+#: package/contents/ui/config/ConfigGeral.qml:33
 msgid "Unit:"
 msgstr ""
 
-#: package/contents/ui/config/ConfigGeral.qml:23
+#: package/contents/ui/config/ConfigGeral.qml:34
 msgid "MB/s — megabytes per second"
 msgstr ""
 
-#: package/contents/ui/config/ConfigGeral.qml:29
+#: package/contents/ui/config/ConfigGeral.qml:40
 msgid "Mb/s — megabits per second"
 msgstr ""
 
-#: package/contents/ui/config/ConfigGeral.qml:37
+#: package/contents/ui/config/ConfigGeral.qml:48
+msgid "History:"
+msgstr ""
+
+#: package/contents/ui/config/ConfigGeral.qml:59
+msgid ""
+"The clock icon on the widget shows this period. Changing it clears the "
+"history."
+msgstr ""
+
+#: package/contents/ui/config/ConfigGeral.qml:70
 msgid "Details:"
 msgstr ""
 
-#: package/contents/ui/config/ConfigGeral.qml:38
+#: package/contents/ui/config/ConfigGeral.qml:71
 msgid "Show the IP address"
 msgstr ""
 
