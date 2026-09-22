@@ -57,8 +57,8 @@ PlasmoidItem {
     readonly property color corBaixa: tema.Kirigami.Theme.highlightColor
 
     // Upload: uma variação sóbria do destaque.
-    //   0 = mesmo tom, mais leve · 1 = neutro (cinza do texto) · 2 = análogo
-    readonly property int paleta: 1
+    //   0 = mesmo tom, mais leve (ESCOLHA do dono) · 1 = neutro · 2 = análogo
+    readonly property int paleta: 0
     readonly property color corSobe: {
         const d = tema.Kirigami.Theme.highlightColor;
         if (root.paleta === 1) return Qt.alpha(tema.Kirigami.Theme.textColor, 0.55);
