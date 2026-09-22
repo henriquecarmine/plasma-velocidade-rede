@@ -1,14 +1,15 @@
 /*
  * Velocidade da Rede — widget de área de trabalho.
  *
- * Um cartão com o gráfico de área dupla correndo em tempo real (download e
- * upload), os números grandes por cima, e embaixo o que identifica a rede: o
- * nome; no wifi a geração (4/5/6/6E/7), a velocidade nominal negociada e o
- * sinal; no cabo a velocidade do link (100/1000/10000).
+ * Um cartão em três faixas: em cima os números atuais (download e upload,
+ * lado a lado); no meio o gráfico de 60 s, QUANTITATIVO — escala única
+ * "bonita", três linhas de grade rotuladas e uma linha fina no nível atual
+ * de cada série; embaixo a identidade da rede: o nome, e no wifi a geração
+ * (4/5/6/6E/7), a velocidade nominal e o sinal; no cabo a velocidade do link.
  *
- * Cores: TUDO deriva da cor de destaque do sistema. Download usa o destaque
- * puro; upload usa o destaque com o matiz girado — harmoniza com qualquer cor
- * que a pessoa escolha no tema, sem uma paleta própria brigando com o desktop.
+ * Cores: tudo deriva da cor de destaque do sistema. Download é o destaque;
+ * upload é uma variação SÓBRIA dele (mesmo tom mais leve, neutro, ou
+ * análogo — `paleta`), nunca um matiz oposto brigando com o desktop.
  *
  * TODA string visível passa por i18nd. O script emite tokens, nunca prosa.
  */
@@ -25,9 +26,8 @@ PlasmoidItem {
 
     readonly property string dom: "plasma_applet_com.henrique.velocidaderede"
 
-    // O script viaja DENTRO do pacote; o caminho se resolve em tempo de
-    // execução. Invocado por `bash <caminho>`: o bit de execução não importa
-    // (instaladores de plasmoid descompactam sem preservar permissões).
+    // O script viaja DENTRO do pacote; invocado por `bash <caminho>`, o bit
+    // de execução não importa (instaladores descompactam sem permissões).
     readonly property string script: {
         const u = Qt.resolvedUrl("../code/velocidade-rede").toString();
         return u.replace(/^file:\/\//, "");
@@ -44,23 +44,29 @@ PlasmoidItem {
 
     // ---- tonalidade do sistema -------------------------------------------
     //
-    // Um item só para ter um escopo de tema PRÓPRIO. No desktop, applet sem
-    // fundo recebe o conjunto Complementary (texto claro sobre wallpaper) — e
-    // o FUNDO desse conjunto é escuro e translúcido, igual ao wallpaper: o
-    // cartão desaparecia e sobrava número solto sobre o papel de parede.
-    // Lendo do conjunto Window, o cartão é o cartão do esquema de cores.
+    // Escopo de tema PRÓPRIO: no desktop, applet sem fundo recebe o conjunto
+    // Complementary, cujo fundo é escuro e translúcido como o wallpaper — o
+    // cartão sumia. Lendo do conjunto Window, o cartão é o do esquema de cores.
     Item {
         id: tema
         Kirigami.Theme.inherit: false
         Kirigami.Theme.colorSet: Kirigami.Theme.Window
     }
-    readonly property color corBaixa: tema.Kirigami.Theme.highlightColor
-    readonly property color corSobe: Qt.hsla(
-        (tema.Kirigami.Theme.highlightColor.hslHue + 0.42) % 1.0,
-        Math.min(1.0, tema.Kirigami.Theme.highlightColor.hslSaturation * 0.9),
-        Math.min(0.72, tema.Kirigami.Theme.highlightColor.hslLightness + 0.10), 1.0)
     readonly property color corTexto: tema.Kirigami.Theme.textColor
     readonly property color corFundo: tema.Kirigami.Theme.backgroundColor
+    readonly property color corBaixa: tema.Kirigami.Theme.highlightColor
+
+    // Upload: uma variação sóbria do destaque.
+    //   0 = mesmo tom, mais leve · 1 = neutro (cinza do texto) · 2 = análogo
+    readonly property int paleta: 1
+    readonly property color corSobe: {
+        const d = tema.Kirigami.Theme.highlightColor;
+        if (root.paleta === 1) return Qt.alpha(tema.Kirigami.Theme.textColor, 0.55);
+        if (root.paleta === 2) return Qt.hsla((d.hslHue + 0.91) % 1.0,   // −0,09: rumo ao ciano, não ao violeta
+                                             Math.min(1.0, d.hslSaturation * 0.75),
+                                             Math.min(0.72, d.hslLightness + 0.08), 1.0);
+        return Qt.hsla(d.hslHue, d.hslSaturation * 0.55, Math.min(0.82, d.hslLightness + 0.24), 1.0);
+    }
 
     function rgba(c, a) {
         return "rgba(" + Math.round(c.r * 255) + "," + Math.round(c.g * 255)
@@ -104,7 +110,7 @@ PlasmoidItem {
     function num(b) {
         const loc = Qt.locale();
         const v = root.emBits ? b * 8 : b;
-        if (v >= 1e6) return Number(v / 1e6).toLocaleString(loc, 'f', 1);
+        if (v >= 1e6) return Number(v / 1e6).toLocaleString(loc, 'f', v >= 10e6 ? 0 : 1);
         if (v >= 1e3) return Number(v / 1e3).toLocaleString(loc, 'f', 0);
         return Number(v).toLocaleString(loc, 'f', 0);
     }
@@ -134,23 +140,33 @@ PlasmoidItem {
         return i18nd(root.dom, "No network");
     }
 
-    // Escala AUTOMÁTICA por série: o maior valor recente, com um piso. Sem o
-    // piso, uma rede parada vira ruído amplificado até o teto; sem a escala,
-    // 100 MB/s de download achatariam 1 MB/s de upload a uma linha reta.
-    function maxDe(h) {
-        // Piso de 10 KB/s: a conversa de fundo de uma rede "parada" (1–3
-        // KB/s) ainda desenha textura no terço de baixo — o gráfico é a
-        // identidade deste widget, e um traço reto no chão o descaracteriza.
-        // Com tráfego de verdade a escala cresce e o chão achata, como deve.
+    // ---- escala do gráfico ------------------------------------------------
+    //
+    // UMA escala para as duas séries, senão o gráfico não é quantitativo: o
+    // olho compara alturas, e alturas em escalas diferentes mentem. O teto é
+    // um número "bonito" (1, 2, 4, 5, 8, 10 × 10^k) NA UNIDADE EXIBIDA, para
+    // as três linhas de grade caírem em rótulos redondos (5 · 10 · 15).
+    // Piso de 10 KB/s: a conversa de fundo de uma rede parada ainda desenha
+    // textura, em vez de um traço reto no chão.
+    function bonito(x) {
+        if (x <= 0) return 1;
+        const k = Math.pow(10, Math.floor(Math.log(x) / Math.LN10));
+        const m = x / k;
+        const degraus = [1, 2, 4, 5, 8, 10];
+        for (let i = 0; i < degraus.length; i++) if (m <= degraus[i]) return degraus[i] * k;
+        return 10 * k;
+    }
+    readonly property real topo: {
         let m = 10e3;
-        for (let i = 0; i < h.length; i++) if (h[i] > m) m = h[i];
-        return m * 1.08;
+        for (let i = 0; i < histDown.length; i++) if (histDown[i] > m) m = histDown[i];
+        for (let i = 0; i < histUp.length;   i++) if (histUp[i]   > m) m = histUp[i];
+        const b = root.emBits ? 8 : 1;
+        return root.bonito(m * b * 1.05) / b;   // bonito na unidade exibida, guardado em bytes
     }
 
     function aplicarEstado(saida) {
-        // Resposta VAZIA não é "sem rede": é o motor de execução engasgando
-        // (acontece no primeiro quadro). Fica o último estado conhecido; a
-        // ausência de rede de verdade chega explícita, como "none|…".
+        // Resposta VAZIA não é "sem rede": é o motor de execução engasgando.
+        // Fica o último estado; a ausência de rede chega explícita, "none|…".
         if (saida.indexOf("|") < 0) return;
         const c = saida.split("|");
         root.tipo    = c[0] || "none";
@@ -160,21 +176,19 @@ PlasmoidItem {
         root.dbm     = c[4] || "";
         root.link    = c[5] || "";
         root.ip      = c[6] || "";
-        // SSID por último: pode ter "|", junta o resto.
-        root.ssid    = c.slice(7).join("|");
+        root.ssid    = c.slice(7).join("|");   // SSID por último: pode ter "|"
     }
 
     function aplicarTaxa(saida) {
-        // Vazio aqui seria lido como contador 0 — e a leitura seguinte
-        // viraria um pico de centenas de MB/s. Ignora e espera a próxima.
+        // Vazio seria lido como contador 0 — e a próxima leitura, um pico
+        // de centenas de MB/s. Ignora e espera a seguinte.
         if (saida.indexOf("|") < 0) return;
         const c = saida.split("|");
         const rx = parseFloat(c[0]) || 0, tx = parseFloat(c[1]) || 0;
         const t = Date.now() / 1000;
         if (root.ultRx >= 0 && t > root.ultT) {
             const dt = t - root.ultT;
-            // Contador que anda para trás é interface reiniciada, não tráfego
-            // negativo.
+            // Contador que anda para trás é interface reiniciada.
             const d = Math.max(0, (rx - root.ultRx) / dt);
             const u = Math.max(0, (tx - root.ultTx) / dt);
             root.down = d; root.up = u;
@@ -186,8 +200,8 @@ PlasmoidItem {
         root.ultRx = rx; root.ultTx = tx; root.ultT = t;
     }
 
-    // Trocou de interface (cabo entrou, wifi caiu): zera as bases, senão a
-    // primeira taxa sai como a diferença entre contadores de placas distintas.
+    // Trocou de interface: zera as bases, senão a primeira taxa sai como a
+    // diferença entre contadores de placas distintas.
     onDevChanged: {
         root.ultRx = -1; root.ultTx = -1;
         root.histDown = []; root.histUp = [];
@@ -201,8 +215,7 @@ PlasmoidItem {
         onNewData: function (source, data) {
             const saida = (data["stdout"] || "").trim();
             disconnectSource(source);
-            // Despacha pelo FLAG exato (o prefixo de cmd("") tem tamanho
-            // fixo), imune ao conteúdo dos argumentos.
+            // Despacha pelo FLAG exato (prefixo de cmd("") tem tamanho fixo).
             const pref = root.cmd("");
             let flag = "";
             if (source.indexOf(pref) === 0)
@@ -213,7 +226,7 @@ PlasmoidItem {
     }
 
     // Identidade da rede: devagar, muda pouco. Contadores: a cada segundo —
-    // é uma leitura de dois arquivos do /sys, e é o que dá vida ao gráfico.
+    // dois arquivos do /sys, e é o que dá vida ao gráfico.
     Timer {
         interval: 5000; running: true; repeat: true; triggeredOnStart: true
         onTriggered: exec.connectSource(root.cmd("--estado"))
@@ -223,32 +236,40 @@ PlasmoidItem {
         onTriggered: if (root.dev.length > 0) exec.connectSource(root.cmd("--taxa " + root.dev))
     }
 
-    // ---- desenho da série (Canvas) ----------------------------------------
-    function linha(ctx, w, h, dados, maxV, cor, esp) {
+    // ---- desenho (Canvas) ------------------------------------------------
+    function yDe(v, h, maxV) { return h - Math.min(1, v / maxV) * (h - 2) - 1; }
+
+    // A série: área com degradê e a linha por cima. Ancorada à DIREITA: o
+    // agora fica na borda e o passado entra rolando, como num monitor.
+    function serie(ctx, w, h, dados, maxV, cor, esp, alfaArea) {
         if (dados.length < 2) return;
-        // Ancorado à DIREITA: o agora fica na borda direita e o passado entra
-        // rolando para a esquerda, como num monitor de atividade. Ancorado à
-        // esquerda, o primeiro minuto era um toco no canto crescendo devagar.
         const desloc = root.nHist - dados.length;
-        const pontos = [];
-        for (let i = 0; i < dados.length; i++) {
-            pontos.push([(i + desloc) / (root.nHist - 1) * w,
-                         h - Math.min(1, dados[i] / maxV) * (h - 3) - 1.5]);
-        }
-        // Área com degradê, depois a linha por cima.
+        const p = [];
+        for (let i = 0; i < dados.length; i++)
+            p.push([(i + desloc) / (root.nHist - 1) * w, root.yDe(dados[i], h, maxV)]);
         ctx.beginPath();
-        ctx.moveTo(pontos[0][0], pontos[0][1]);
-        for (let i = 1; i < pontos.length; i++) ctx.lineTo(pontos[i][0], pontos[i][1]);
-        ctx.lineTo(pontos[pontos.length - 1][0], h); ctx.lineTo(pontos[0][0], h); ctx.closePath();
+        ctx.moveTo(p[0][0], p[0][1]);
+        for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]);
+        ctx.lineTo(p[p.length - 1][0], h); ctx.lineTo(p[0][0], h); ctx.closePath();
         const g = ctx.createLinearGradient(0, 0, 0, h);
-        g.addColorStop(0, root.rgba(cor, 0.42));
-        g.addColorStop(1, root.rgba(cor, 0.02));
+        g.addColorStop(0, root.rgba(cor, alfaArea));
+        g.addColorStop(1, root.rgba(cor, 0.01));
         ctx.fillStyle = g; ctx.fill();
         ctx.beginPath();
-        ctx.moveTo(pontos[0][0], pontos[0][1]);
-        for (let i = 1; i < pontos.length; i++) ctx.lineTo(pontos[i][0], pontos[i][1]);
+        ctx.moveTo(p[0][0], p[0][1]);
+        for (let i = 1; i < p.length; i++) ctx.lineTo(p[i][0], p[i][1]);
         ctx.strokeStyle = root.rgba(cor, 1); ctx.lineWidth = esp;
         ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
+    }
+
+    // A linha fina no NÍVEL ATUAL da série: tracejada, atravessa o gráfico.
+    // É a régua que diz "a velocidade de agora está AQUI na escala".
+    function marcador(ctx, w, h, v, maxV, cor) {
+        const y = Math.round(root.yDe(v, h, maxV)) + 0.5;
+        ctx.strokeStyle = root.rgba(cor, 0.7); ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let x = 0; x < w; x += 7) { ctx.moveTo(x, y); ctx.lineTo(Math.min(w, x + 4), y); }
+        ctx.stroke();
     }
 
     fullRepresentation: Item {
@@ -260,18 +281,17 @@ PlasmoidItem {
         Layout.preferredHeight: Kirigami.Units.gridUnit * 13
 
         // Fator de escala da tipografia: o tamanho atual em relação ao de
-        // projeto, pelo MENOR dos dois eixos — num widget largo e baixo, é a
-        // altura que manda. Reduzir o widget reduz os números junto; o piso
-        // garante que nunca fiquem ilegíveis, o teto que um widget enorme
-        // não vire outdoor.
+        // projeto, pelo MENOR dos dois eixos. Piso para não ficar ilegível,
+        // teto para um widget enorme não virar outdoor.
         readonly property real escala: Math.max(0.45, Math.min(3.0,
             Math.min(width  / (Kirigami.Units.gridUnit * 22),
                      height / (Kirigami.Units.gridUnit * 13))))
+        readonly property real ptPeq: Math.max(6, Kirigami.Theme.smallFont.pointSize * escala)
 
         Kirigami.ShadowedRectangle {
-            // O mesmo conjunto Window para TUDO que está dentro: os rótulos
-            // sem cor explícita herdam daqui, e ficam legíveis sobre o cartão
-            // em esquema claro ou escuro.
+            id: cartao
+            // O conjunto Window para TUDO que está dentro: os rótulos sem cor
+            // explícita herdam o par fundo/texto certo em tema claro ou escuro.
             Kirigami.Theme.inherit: false
             Kirigami.Theme.colorSet: Kirigami.Theme.Window
             anchors.fill: parent
@@ -284,109 +304,128 @@ PlasmoidItem {
             shadow.color: Qt.rgba(0, 0, 0, 0.35)
             clip: true
 
-            Canvas {
-                id: grafico
-                anchors.fill: parent
-                anchors.topMargin: Kirigami.Units.smallSpacing
-                anchors.bottomMargin: rodape.height + Kirigami.Units.largeSpacing * 1.5
-                onPaint: {
-                    const ctx = getContext("2d");
-                    ctx.reset();
-                    // Grade discreta: quatro faixas.
-                    ctx.strokeStyle = root.rgba(root.corTexto, 0.06); ctx.lineWidth = 1;
-                    for (let i = 1; i < 4; i++) {
-                        const y = height * i / 4;
-                        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
-                    }
-                    root.linha(ctx, width, height, root.histDown, root.maxDe(root.histDown), root.corBaixa, 2.2);
-                    root.linha(ctx, width, height, root.histUp,   root.maxDe(root.histUp),   root.corSobe,  2.2);
-                }
-                Connections {
-                    target: root
-                    function onHistUpChanged() { grafico.requestPaint(); }
-                }
-                onWidthChanged: requestPaint()
-                onHeightChanged: requestPaint()
-            }
-
-            // Os números, por cima do gráfico.
             ColumnLayout {
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.margins: Kirigami.Units.largeSpacing
-                spacing: 0
+                anchors.fill: parent
+                anchors.margins: Math.max(Kirigami.Units.smallSpacing,
+                                          Kirigami.Units.largeSpacing * janela.escala)
+                spacing: Kirigami.Units.smallSpacing * janela.escala
 
+                // ---- faixa 1: os números, lado a lado, FORA do gráfico ----
                 RowLayout {
-                    spacing: Kirigami.Units.smallSpacing * janela.escala
-                    PlasmaComponents.Label {
-                        text: "↓"; color: root.corBaixa
-                        font.pointSize: 18 * janela.escala
-                    }
-                    PlasmaComponents.Label {
-                        text: root.num(root.down)
-                        font.pointSize: 26 * janela.escala
-                        font.weight: Font.DemiBold; color: root.corBaixa
-                    }
-                    PlasmaComponents.Label {
-                        text: root.unid(root.down)
-                        font.pointSize: Math.max(6, Kirigami.Theme.smallFont.pointSize * janela.escala)
-                        opacity: 0.7
-                        Layout.alignment: Qt.AlignBottom
-                        Layout.bottomMargin: 6 * janela.escala
-                    }
-                }
-                RowLayout {
-                    spacing: Kirigami.Units.smallSpacing * janela.escala
-                    PlasmaComponents.Label {
-                        text: "↑"; color: root.corSobe
-                        font.pointSize: 13 * janela.escala
-                    }
-                    PlasmaComponents.Label {
-                        text: root.num(root.up)
-                        font.pointSize: 17 * janela.escala
-                        font.weight: Font.DemiBold; color: root.corSobe
-                    }
-                    PlasmaComponents.Label {
-                        text: root.unid(root.up)
-                        font.pointSize: Math.max(6, Kirigami.Theme.smallFont.pointSize * janela.escala)
-                        opacity: 0.7
-                        Layout.alignment: Qt.AlignBottom
-                        Layout.bottomMargin: 3 * janela.escala
-                    }
-                }
-            }
-
-            // Rodapé: quem é a rede.
-            RowLayout {
-                id: rodape
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                anchors.margins: Kirigami.Units.largeSpacing
-                spacing: Kirigami.Units.smallSpacing
-
-                Kirigami.Icon {
-                    source: root.tipo === "cabo" ? "network-wired-symbolic"
-                          : root.tipo === "wifi" ? "network-wireless-symbolic"
-                          : "network-disconnect-symbolic"
-                    color: root.tipo === "none" ? root.corTexto : root.corBaixa
-                    opacity: root.tipo === "none" ? 0.5 : 1
-                    Layout.preferredWidth:  Kirigami.Units.iconSizes.small * janela.escala
-                    Layout.preferredHeight: Kirigami.Units.iconSizes.small * janela.escala
-                }
-                PlasmaComponents.Label {
-                    text: root.textoInfo()
-                    font.pointSize: Math.max(6, Kirigami.Theme.smallFont.pointSize * janela.escala)
-                    opacity: 0.65
-                    elide: Text.ElideRight
                     Layout.fillWidth: true
-                    Layout.minimumWidth: 0
+                    spacing: Kirigami.Units.largeSpacing * 1.5 * janela.escala
+
+                    Repeater {
+                        model: [
+                            { seta: "↓", val: root.down, cor: root.corBaixa },
+                            { seta: "↑", val: root.up,   cor: root.corSobe }
+                        ]
+                        delegate: RowLayout {
+                            spacing: Kirigami.Units.smallSpacing * janela.escala
+                            PlasmaComponents.Label {
+                                text: modelData.seta
+                                color: modelData.cor
+                                font.pointSize: 15 * janela.escala
+                            }
+                            PlasmaComponents.Label {
+                                text: root.num(modelData.val)
+                                color: modelData.cor
+                                font.pointSize: 22 * janela.escala
+                                font.weight: Font.DemiBold
+                            }
+                            PlasmaComponents.Label {
+                                text: root.unid(modelData.val)
+                                font.pointSize: janela.ptPeq
+                                opacity: 0.7
+                                Layout.alignment: Qt.AlignBottom
+                                Layout.bottomMargin: 4 * janela.escala
+                            }
+                        }
+                    }
+                    Item { Layout.fillWidth: true }
                 }
-                PlasmaComponents.Label {
-                    visible: root.tipo === "wifi" && root.dbm.length > 0
-                    text: i18nd(root.dom, "%1 dBm", root.dbm)
-                    font.pointSize: Math.max(6, Kirigami.Theme.smallFont.pointSize * janela.escala)
-                    opacity: 0.65
+
+                // ---- faixa 2: o gráfico, com grade rotulada e marcadores --
+                Item {
+                    id: area
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.minimumHeight: Kirigami.Units.gridUnit * 2
+
+                    Canvas {
+                        id: grafico
+                        anchors.fill: parent
+                        onPaint: {
+                            const ctx = getContext("2d");
+                            ctx.reset();
+                            const w = width, h = height, topo = root.topo;
+                            // Grade: três linhas finas (¼, ½, ¾ da escala).
+                            ctx.strokeStyle = root.rgba(root.corTexto, 0.10); ctx.lineWidth = 1;
+                            for (let i = 1; i <= 3; i++) {
+                                const y = Math.round(root.yDe(topo * i / 4, h, topo)) + 0.5;
+                                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+                            }
+                            root.serie(ctx, w, h, root.histDown, topo, root.corBaixa, Math.max(1.2, 2 * janela.escala), 0.30);
+                            root.serie(ctx, w, h, root.histUp,   topo, root.corSobe,  Math.max(1.2, 2 * janela.escala), 0.16);
+                            if (root.histDown.length > 1) root.marcador(ctx, w, h, root.down, topo, root.corBaixa);
+                            if (root.histUp.length   > 1) root.marcador(ctx, w, h, root.up,   topo, root.corSobe);
+                        }
+                        Connections {
+                            target: root
+                            function onHistUpChanged() { grafico.requestPaint(); }
+                            function onEmBitsChanged() { grafico.requestPaint(); }
+                        }
+                        onWidthChanged: requestPaint()
+                        onHeightChanged: requestPaint()
+                    }
+
+                    // Rótulos da grade, encostados à direita, em cima da linha.
+                    // Somem quando o widget é pequeno demais para lê-los.
+                    Repeater {
+                        model: 3
+                        delegate: PlasmaComponents.Label {
+                            required property int index
+                            readonly property real fracao: (index + 1) / 4
+                            visible: janela.escala >= 0.6 && root.histDown.length > 1
+                            text: root.num(root.topo * fracao) + " " + root.unid(root.topo * fracao)
+                            font.pointSize: Math.max(6, janela.ptPeq * 0.9)
+                            opacity: 0.45
+                            anchors.right: parent.right
+                            anchors.rightMargin: Kirigami.Units.smallSpacing
+                            y: Math.round(root.yDe(root.topo * fracao, area.height, root.topo)) - height - 1
+                        }
+                    }
+                }
+
+                // ---- faixa 3: quem é a rede ------------------------------
+                RowLayout {
+                    id: rodape
+                    Layout.fillWidth: true
+                    spacing: Kirigami.Units.smallSpacing * janela.escala
+
+                    Kirigami.Icon {
+                        source: root.tipo === "cabo" ? "network-wired-symbolic"
+                              : root.tipo === "wifi" ? "network-wireless-symbolic"
+                              : "network-disconnect-symbolic"
+                        color: root.tipo === "none" ? root.corTexto : root.corBaixa
+                        opacity: root.tipo === "none" ? 0.5 : 1
+                        Layout.preferredWidth:  Kirigami.Units.iconSizes.small * janela.escala
+                        Layout.preferredHeight: Kirigami.Units.iconSizes.small * janela.escala
+                    }
+                    PlasmaComponents.Label {
+                        text: root.textoInfo()
+                        font.pointSize: janela.ptPeq
+                        opacity: 0.65
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                    }
+                    PlasmaComponents.Label {
+                        visible: root.tipo === "wifi" && root.dbm.length > 0
+                        text: i18nd(root.dom, "%1 dBm", root.dbm)
+                        font.pointSize: janela.ptPeq
+                        opacity: 0.65
+                    }
                 }
             }
         }
