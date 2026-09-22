@@ -12,7 +12,7 @@
         "Id": "com.henrique.velocidaderede",
         "License": "MIT",
         "Name": "Network Speed",
-        "Version": "0.1.0"
+        "Version": "1.0.0"
     },
     "X-Plasma-API-Minimum-Version": "6.0"
 }
