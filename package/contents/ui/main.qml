@@ -254,10 +254,19 @@ PlasmoidItem {
     fullRepresentation: Item {
         id: janela
         // Redimensionável no desktop; o gráfico ocupa o que houver.
-        Layout.minimumWidth:    Kirigami.Units.gridUnit * 14
-        Layout.minimumHeight:   Kirigami.Units.gridUnit * 8
+        Layout.minimumWidth:    Kirigami.Units.gridUnit * 9
+        Layout.minimumHeight:   Kirigami.Units.gridUnit * 5
         Layout.preferredWidth:  Kirigami.Units.gridUnit * 22
         Layout.preferredHeight: Kirigami.Units.gridUnit * 13
+
+        // Fator de escala da tipografia: o tamanho atual em relação ao de
+        // projeto, pelo MENOR dos dois eixos — num widget largo e baixo, é a
+        // altura que manda. Reduzir o widget reduz os números junto; o piso
+        // garante que nunca fiquem ilegíveis, o teto que um widget enorme
+        // não vire outdoor.
+        readonly property real escala: Math.max(0.45, Math.min(3.0,
+            Math.min(width  / (Kirigami.Units.gridUnit * 22),
+                     height / (Kirigami.Units.gridUnit * 13))))
 
         Kirigami.ShadowedRectangle {
             // O mesmo conjunto Window para TUDO que está dentro: os rótulos
@@ -308,33 +317,41 @@ PlasmoidItem {
                 spacing: 0
 
                 RowLayout {
-                    spacing: Kirigami.Units.smallSpacing
-                    PlasmaComponents.Label { text: "↓"; font.pointSize: 18; color: root.corBaixa }
+                    spacing: Kirigami.Units.smallSpacing * janela.escala
+                    PlasmaComponents.Label {
+                        text: "↓"; color: root.corBaixa
+                        font.pointSize: 18 * janela.escala
+                    }
                     PlasmaComponents.Label {
                         text: root.num(root.down)
-                        font.pointSize: 26; font.weight: Font.DemiBold; color: root.corBaixa
+                        font.pointSize: 26 * janela.escala
+                        font.weight: Font.DemiBold; color: root.corBaixa
                     }
                     PlasmaComponents.Label {
                         text: root.unid(root.down)
-                        font.pointSize: Kirigami.Theme.smallFont.pointSize
+                        font.pointSize: Math.max(6, Kirigami.Theme.smallFont.pointSize * janela.escala)
                         opacity: 0.7
                         Layout.alignment: Qt.AlignBottom
-                        Layout.bottomMargin: 6
+                        Layout.bottomMargin: 6 * janela.escala
                     }
                 }
                 RowLayout {
-                    spacing: Kirigami.Units.smallSpacing
-                    PlasmaComponents.Label { text: "↑"; font.pointSize: 13; color: root.corSobe }
+                    spacing: Kirigami.Units.smallSpacing * janela.escala
+                    PlasmaComponents.Label {
+                        text: "↑"; color: root.corSobe
+                        font.pointSize: 13 * janela.escala
+                    }
                     PlasmaComponents.Label {
                         text: root.num(root.up)
-                        font.pointSize: 17; font.weight: Font.DemiBold; color: root.corSobe
+                        font.pointSize: 17 * janela.escala
+                        font.weight: Font.DemiBold; color: root.corSobe
                     }
                     PlasmaComponents.Label {
                         text: root.unid(root.up)
-                        font.pointSize: Kirigami.Theme.smallFont.pointSize
+                        font.pointSize: Math.max(6, Kirigami.Theme.smallFont.pointSize * janela.escala)
                         opacity: 0.7
                         Layout.alignment: Qt.AlignBottom
-                        Layout.bottomMargin: 3
+                        Layout.bottomMargin: 3 * janela.escala
                     }
                 }
             }
@@ -354,12 +371,12 @@ PlasmoidItem {
                           : "network-disconnect-symbolic"
                     color: root.tipo === "none" ? root.corTexto : root.corBaixa
                     opacity: root.tipo === "none" ? 0.5 : 1
-                    Layout.preferredWidth:  Kirigami.Units.iconSizes.small
-                    Layout.preferredHeight: Kirigami.Units.iconSizes.small
+                    Layout.preferredWidth:  Kirigami.Units.iconSizes.small * janela.escala
+                    Layout.preferredHeight: Kirigami.Units.iconSizes.small * janela.escala
                 }
                 PlasmaComponents.Label {
                     text: root.textoInfo()
-                    font.pointSize: Kirigami.Theme.smallFont.pointSize
+                    font.pointSize: Math.max(6, Kirigami.Theme.smallFont.pointSize * janela.escala)
                     opacity: 0.65
                     elide: Text.ElideRight
                     Layout.fillWidth: true
@@ -368,7 +385,7 @@ PlasmoidItem {
                 PlasmaComponents.Label {
                     visible: root.tipo === "wifi" && root.dbm.length > 0
                     text: i18nd(root.dom, "%1 dBm", root.dbm)
-                    font.pointSize: Kirigami.Theme.smallFont.pointSize
+                    font.pointSize: Math.max(6, Kirigami.Theme.smallFont.pointSize * janela.escala)
                     opacity: 0.65
                 }
             }
