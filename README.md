@@ -18,6 +18,10 @@ chart in the **system accent colour**, with the network identity underneath.
 The Wi-Fi generation is read from the kernel (nl80211, via `iw`) — it is not
 exposed by NetworkManager.
 
+![Live view](screenshots/01-live.png)
+
+![Period view](screenshots/02-period.png)
+
 ## Requirements
 
 `iw`, `iproute`, `bash`, Plasma 6.

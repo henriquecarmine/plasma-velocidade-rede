@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Network Speed — a marca: um cartão escuro com o gráfico de área (download)
+       e a linha leve (upload), ancorados à direita como no widget, e as duas
+       setas. Azul do destaque Breeze; upload = mesmo tom, mais claro. -->
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b2f36"/><stop offset="1" stop-color="#1b1e23"/>
+    </linearGradient>
+    <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3daee9" stop-opacity="0.55"/><stop offset="1" stop-color="#3daee9" stop-opacity="0.04"/>
+    </linearGradient>
+  </defs>
+  <rect x="24" y="24" width="464" height="464" rx="92" fill="url(#fundo)" stroke="#ffffff" stroke-opacity="0.10" stroke-width="6"/>
+  <!-- grade fina -->
+  <g stroke="#ffffff" stroke-opacity="0.09" stroke-width="4">
+    <line x1="80" y1="250" x2="432" y2="250"/><line x1="80" y1="320" x2="432" y2="320"/><line x1="80" y1="390" x2="432" y2="390"/>
+  </g>
+  <!-- download: área + linha -->
+  <path d="M80 420 L140 412 L190 405 L235 396 L268 300 L300 236 L332 262 L364 218 L400 238 L432 226 L432 428 L80 428 Z" fill="url(#area)"/>
+  <path d="M80 420 L140 412 L190 405 L235 396 L268 300 L300 236 L332 262 L364 218 L400 238 L432 226" fill="none" stroke="#3daee9" stroke-width="16" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- upload: linha leve, mesmo tom mais claro -->
+  <path d="M80 424 L150 420 L210 418 L255 410 L290 372 L330 380 L370 352 L405 360 L432 348" fill="none" stroke="#9fd7f4" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"/>
+  <!-- setas -->
+  <g font-family="Manrope, 'Noto Sans', 'DejaVu Sans', sans-serif" font-weight="700">
+    <text x="88" y="168" font-size="118" fill="#3daee9">↓</text>
+    <text x="196" y="168" font-size="118" fill="#9fd7f4">↑</text>
+  </g>
+</svg>
