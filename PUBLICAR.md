@@ -3,7 +3,7 @@
 **Categoria:** Plasma 6 Add-Ons → Plasma Widgets
 **Licença:** MIT
 **Arquivo a enviar:** `dist/velocidade-rede.plasmoid` (também anexado no
-[release v1.0.0](https://github.com/henriquecarmine/plasma-velocidade-rede/releases/tag/v1.0.0))
+[release v1.0.1](https://github.com/henriquecarmine/plasma-velocidade-rede/releases/tag/v1.0.1))
 **Repositório:** https://github.com/henriquecarmine/plasma-velocidade-rede
 **Logo:** `artwork/logo.png` (512) · `artwork/logo-256.png`
 **Capturas:** `screenshots/01-live.png` · `screenshots/02-period.png` (em inglês, de propósito: a loja é internacional)
