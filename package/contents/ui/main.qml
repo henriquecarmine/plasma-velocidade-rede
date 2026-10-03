@@ -381,8 +381,22 @@ PlasmoidItem {
         // Redimensionável no desktop; o gráfico ocupa o que houver.
         Layout.minimumWidth:    Kirigami.Units.gridUnit * 9
         Layout.minimumHeight:   Kirigami.Units.gridUnit * 5
-        Layout.preferredWidth:  Kirigami.Units.gridUnit * 22
-        Layout.preferredHeight: Kirigami.Units.gridUnit * 13
+        // O preferido só vale para o tamanho inicial: o layout do desktop
+        // (GridLayoutManager::adjustToItemSizeHints) CRESCE o widget até o
+        // preferido sempre que a representação carrega — a cada login —,
+        // desfazendo o tamanho que o usuário escolheu. No desktop, depois
+        // do primeiro dimensionamento, o preferido sai de cena (-1).
+        readonly property bool fixarPreferido: Plasmoid.formFactor !== PlasmaCore.Types.Planar
+                                               || !Plasmoid.configuration.dimensionado
+        Layout.preferredWidth:  fixarPreferido ? Kirigami.Units.gridUnit * 22 : -1
+        Layout.preferredHeight: fixarPreferido ? Kirigami.Units.gridUnit * 13 : -1
+        Timer {
+            // Dá tempo ao layout de aplicar o tamanho inicial antes de soltar.
+            interval: 3000
+            running: Plasmoid.formFactor === PlasmaCore.Types.Planar
+                     && !Plasmoid.configuration.dimensionado
+            onTriggered: Plasmoid.configuration.dimensionado = true
+        }
 
         // Fator de escala da tipografia: o tamanho atual em relação ao de
         // projeto, pelo MENOR dos dois eixos. Piso para não ficar ilegível,

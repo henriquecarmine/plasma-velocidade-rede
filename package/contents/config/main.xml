@@ -20,6 +20,11 @@
     <entry name="modoPeriodo" type="Bool">
       <default>false</default>
     </entry>
+    <!-- Já ganhou o tamanho inicial no desktop? Depois disso o tamanho
+         preferido some, senão o Plasma re-infla o widget a cada login. -->
+    <entry name="dimensionado" type="Bool">
+      <default>false</default>
+    </entry>
     <!-- O anel de baldes do período (JSON, ~240 entradas). Limitado por
          construção: não é log, é a última janela. -->
     <entry name="historico" type="String">
