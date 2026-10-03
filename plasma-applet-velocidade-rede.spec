@@ -6,7 +6,7 @@
 %global clamp_mtime_to_source_date_epoch 0
 
 Name:           plasma-applet-velocidade-rede
-Version:        1.0.0
+Version:        1.0.1
 Release:        1%{?dist}
 Summary:        Plasma desktop widget with live network speed chart and network info
 
@@ -48,6 +48,10 @@ rm -f %{buildroot}%{_datadir}/plasma/plasmoids/%{plasmoid_id}/README.md
 %{_datadir}/plasma/plasmoids/%{plasmoid_id}/
 
 %changelog
+* Sat Oct 03 2026 Henrique Carmine <henriquecarmine@gmail.com> - 1.0.1-1
+- Fix: the widget no longer grows back to its default size on every login;
+  the size chosen on the desktop is kept.
+
 * Tue Sep 22 2026 Henrique Carmine <henriquecarmine@gmail.com> - 1.0.0-1
 - First public release. Desktop widget with a live 60 s dual-area chart
   (download/upload) in the system accent colour; current speeds in their own
